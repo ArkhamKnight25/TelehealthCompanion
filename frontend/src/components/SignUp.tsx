@@ -1,9 +1,61 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 
 type UserType = "user" | "doctor";
+
+// Doctor signup function
+const doctorSignUp = async (
+  name: string,
+  email: string,
+  phone: string,
+  specialisation: string,
+  password: string
+) => {
+  try {
+    const response = await fetch("http://localhost:5000/api/doctors/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name, email, phone, specialisation, password }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error);
+
+    return data;
+  } catch (error) {
+    console.error("Error signing up doctor:", error);
+    throw error;
+  }
+};
+
+// User/Patient signup function
+const userSignUp = async (
+  name: string,
+  email: string,
+  phone: string,
+  password: string
+) => {
+  try {
+    const response = await fetch("http://localhost:5000/api/users/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name, email, phone, password }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error);
+
+    return data;
+  } catch (error) {
+    console.error("Error signing up user:", error);
+    throw error;
+  }
+};
 
 const SignUp = () => {
   const [userType, setUserType] = useState<UserType>("user");
@@ -23,46 +75,27 @@ const SignUp = () => {
     setError(null);
 
     try {
-      const table = userType === "user" ? "Users" : "Doctors";
-
-      // Check if email already exists in the table
-      const { data: existingUser, error: checkError } = await supabase
-        .from(table)
-        .select("email")
-        .eq("email", email)
-        .single();
-
-      if (existingUser) {
-        throw new Error(`A ${userType} account with this email already exists`);
-      }
-
-      // Insert new user data into appropriate table with plaintext password
+      // Insert new user data through backend API
       if (userType === "user") {
-        const { data: newUser, error: insertError } = await supabase
-          .from("Users")
-          .insert([{ name, email, phone, password }])
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
+        const newUser = await userSignUp(name, email, phone, password);
 
         // Set user context data
         setAuthUserType("user");
-        localStorage.setItem("userId", newUser.id);
+        localStorage.setItem("userId", String(newUser.id)); // Ensure id is a string
         localStorage.setItem("userEmail", newUser.email);
         localStorage.setItem("userName", newUser.name);
       } else {
-        const { data: newDoctor, error: insertError } = await supabase
-          .from("Doctors")
-          .insert([{ name, email, phone, specialisation, password }])
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
+        const newDoctor = await doctorSignUp(
+          name,
+          email,
+          phone,
+          specialisation,
+          password
+        );
 
         // Set user context data
         setAuthUserType("doctor");
-        localStorage.setItem("userId", newDoctor.id);
+        localStorage.setItem("userId", String(newDoctor.id)); // Ensure id is a string
         localStorage.setItem("userEmail", newDoctor.email);
         localStorage.setItem("userName", newDoctor.name);
       }

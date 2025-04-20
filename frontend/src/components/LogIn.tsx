@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
+import { userLogin, doctorLogin } from "../services/api";
 
 type UserType = "user" | "doctor";
 
@@ -20,40 +20,27 @@ const LogIn = () => {
     setError(null);
 
     try {
-      // Determine which table to query
-      const table = userType === "user" ? "Users" : "Doctors";
+      if (userType === "user") {
+        const user = await userLogin(email, password);
 
-      // Query the database for a user with matching email
-      const { data: userData, error: userError } = await supabase
-        .from(table)
-        .select("*")
-        .eq("email", email)
-        .single();
+        // Set user context data
+        setAuthUserType("user");
+        localStorage.setItem("userId", String(user.id)); // Convert to string in case id is a number
+        localStorage.setItem("userEmail", user.email);
+        localStorage.setItem("userName", user.name);
 
-      if (userError) throw new Error("Invalid credentials");
+        navigate("/patient-dashboard");
+      } else {
+        const doctor = await doctorLogin(email, password);
 
-      if (!userData) {
-        throw new Error(`No ${userType} account found with this email`);
+        // Set user context data
+        setAuthUserType("doctor");
+        localStorage.setItem("userId", String(doctor.id)); // Convert to string in case id is a number
+        localStorage.setItem("userEmail", doctor.email);
+        localStorage.setItem("userName", doctor.name);
+
+        navigate("/doctor-dashboard");
       }
-
-      // Direct password comparison
-      if (password !== userData.password) {
-        throw new Error("Invalid credentials");
-      }
-
-      // Set user type in context
-      setAuthUserType(userType);
-
-      // Store user details in localStorage
-      localStorage.setItem("userId", userData.id);
-      localStorage.setItem("userEmail", userData.email);
-      localStorage.setItem("userName", userData.name);
-      localStorage.setItem("userPhone", userData.phone);
-
-      // Redirect to appropriate dashboard
-      navigate(
-        userType === "user" ? "/patient-dashboard" : "/doctor-dashboard"
-      );
     } catch (error) {
       console.error("Login error:", error);
       if (error instanceof Error) {

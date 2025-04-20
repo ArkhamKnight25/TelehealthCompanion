@@ -1,14 +1,22 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
 
 type UserType = "user" | "doctor" | null;
+
+type UserDetails = {
+  id: string | number;
+  name: string;
+  email: string;
+  phone: string;
+  specialisation?: string;
+  created_at?: string;
+};
 
 type AuthContextType = {
   userType: UserType;
   setUserType: (type: UserType) => void;
-  signOut: () => void;
+  logout: () => void;
   loading: boolean;
-  userDetails: any | null;
+  userDetails: UserDetails | null;
   isAuthenticated: boolean;
 };
 
@@ -17,7 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userType, setUserType] = useState<UserType>(null);
   const [loading, setLoading] = useState(true);
-  const [userDetails, setUserDetails] = useState<any | null>(null);
+  const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
@@ -36,28 +44,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUserDetails = async (userId: string, type: UserType) => {
     try {
-      const table = type === "user" ? "Users" : "Doctors";
-      const { data, error } = await supabase
-        .from(table)
-        .select("*")
-        .eq("id", userId)
-        .single();
+      const API_URL = "http://localhost:5000/api";
+      const endpoint = type === "user" ? "users" : "doctors";
 
-      if (error) throw error;
+      const response = await fetch(`${API_URL}/${endpoint}/${userId}`);
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error);
+
       setUserDetails(data);
     } catch (error) {
       console.error("Error fetching user details:", error);
-      signOut(); // Sign out if there's an error fetching user details
+      logout(); // Sign out if there's an error fetching user details
     }
   };
 
-  const signOut = () => {
+  const logout = () => {
     setUserType(null);
     setUserDetails(null);
     setIsAuthenticated(false);
     localStorage.removeItem("userType");
     localStorage.removeItem("userId");
-    localStorage.removeItem("userPhone");
+    localStorage.removeItem("userEmail");
     localStorage.removeItem("userName");
   };
 
@@ -71,7 +79,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       setIsAuthenticated(true);
     } else {
-      signOut();
+      logout();
     }
   };
 
@@ -80,7 +88,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         userType,
         setUserType: updateUserType,
-        signOut,
+        logout,
         loading,
         userDetails,
         isAuthenticated,
