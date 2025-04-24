@@ -148,11 +148,28 @@ try {
   // Get all doctors
   app.get("/api/doctors", async (req, res) => {
     try {
-      const { data, error } = await supabase.from("Doctors").select("*");
-
-      if (error) return res.status(400).json({ error: error.message });
-      return res.status(200).json(data);
+      console.log("Doctors API endpoint called");
+      
+      // Query all doctors from Supabase
+      const { data, error } = await supabase
+        .from("Doctors")
+        .select("id, name, specialisation");
+      
+      if (error) {
+        console.error("Supabase error fetching doctors:", error);
+        return res.status(400).json({ error: error.message });
+      }
+      
+      // Log the result
+      console.log(`Found ${data ? data.length : 0} doctors`);
+      
+      // Set proper headers
+      res.setHeader('Content-Type', 'application/json');
+      
+      // Return doctors or empty array
+      return res.status(200).json(data || []);
     } catch (err) {
+      console.error("Server error in /api/doctors:", err);
       return res.status(500).json({ error: err.message });
     }
   });
@@ -238,6 +255,197 @@ try {
     } catch (error) {
       console.error("Error checking email:", error);
       return res.status(500).json({ error: "Server error checking email" });
+    }
+  });
+
+  // Get test types
+  app.get("/api/test-types", async (req, res) => {
+    try {
+      // Return the test types defined in your enum
+      const testTypes = [
+        "Urine", "Blood", "Blood pressure", 
+        "Vaccination", "General consultation", "General checkup"
+      ];
+      return res.status(200).json(testTypes);
+    } catch (err) {
+      console.error("Error fetching test types:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Create a new booking endpoint
+  app.post("/api/bookings", async (req, res) => {
+    try {
+      const { user_id, doctor_id, address, test_type, appointment_time } = req.body;
+      
+      console.log("Creating booking:", {
+        user_id,
+        doctor_id,
+        address,
+        test_type,
+        appointment_time
+      });
+      
+      // Validate required fields
+      if (!user_id || !address || !test_type || !appointment_time) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      // Insert booking into Supabase
+      const { data, error } = await supabase
+        .from("Bookings")
+        .insert({
+          user_id,
+          doctor_id: doctor_id || null, // Make doctor optional
+          address,
+          test_type, 
+          appointment_time
+        })
+        .select();
+        
+      if (error) {
+        console.error("Error creating booking:", error);
+        return res.status(400).json({ error: error.message });
+      }
+      
+      console.log("Booking created successfully:", data[0]);
+      return res.status(201).json(data[0]);
+    } catch (err) {
+      console.error("Exception in booking creation:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get bookings for a user
+  app.get("/api/bookings/user/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const { data, error } = await supabase
+        .from("Bookings")
+        .select(`
+          *,
+          Doctors:doctor_id (id, name, specialisation)
+        `)
+        .eq("user_id", userId)
+        .order("appointment_time", { ascending: true });
+        
+      if (error) {
+        console.error("Error fetching user bookings:", error);
+        return res.status(400).json({ error: error.message });
+      }
+      
+      return res.status(200).json(data);
+    } catch (err) {
+      console.error("Exception in fetching user bookings:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // For doctors
+  app.get("/doctors", async (req, res) => {
+    try {
+      console.log("Doctors API called");
+      
+      // Query all doctors from Supabase
+      const { data, error } = await supabase
+        .from("Doctors")
+        .select("id, name, specialisation");
+      
+      if (error) {
+        console.error("Supabase error fetching doctors:", error);
+        return res.status(400).json({ error: error.message });
+      }
+      
+      console.log(`Found ${data.length} doctors`);
+      return res.status(200).json(data || []);
+    } catch (err) {
+      console.error("Server error fetching doctors:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // For test types
+  app.get("/test-types", async (req, res) => {
+    try {
+      // Return the test types defined in your enum
+      const testTypes = [
+        "Urine", "Blood", "Blood pressure", 
+        "Vaccination", "General consultation", "General checkup"
+      ];
+      return res.status(200).json(testTypes);
+    } catch (err) {
+      console.error("Error fetching test types:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // For creating bookings
+  app.post("/bookings", async (req, res) => {
+    try {
+      const { user_id, doctor_id, address, test_type, appointment_time } = req.body;
+      
+      console.log("Creating booking:", {
+        user_id,
+        doctor_id,
+        address,
+        test_type,
+        appointment_time
+      });
+      
+      // Validate required fields
+      if (!user_id || !address || !test_type || !appointment_time) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      // Insert booking into Supabase
+      const { data, error } = await supabase
+        .from("Bookings")
+        .insert({
+          user_id,
+          doctor_id: doctor_id || null,
+          address,
+          test_type,
+          appointment_time
+        })
+        .select();
+        
+      if (error) {
+        console.error("Supabase error creating booking:", error);
+        return res.status(400).json({ error: error.message });
+      }
+      
+      console.log("Booking created successfully:", data[0]);
+      return res.status(201).json(data[0]);
+    } catch (err) {
+      console.error("Server error creating booking:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // For fetching user bookings
+  app.get("/bookings/user/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const { data, error } = await supabase
+        .from("Bookings")
+        .select(`
+          *,
+          Doctors:doctor_id (id, name, specialisation)
+        `)
+        .eq("user_id", userId)
+        .order("appointment_time", { ascending: true });
+        
+      if (error) {
+        console.error("Error fetching user bookings:", error);
+        return res.status(400).json({ error: error.message });
+      }
+      
+      return res.status(200).json(data);
+    } catch (err) {
+      console.error("Error in /bookings/user/:userId endpoint:", err);
+      return res.status(500).json({ error: err.message });
     }
   });
 

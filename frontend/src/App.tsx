@@ -8,6 +8,7 @@ import SignUp from "./components/SignUp";
 import LogIn from "./components/LogIn";
 import PatientDashboard from "./components/PatientDashboard";
 import DoctorDashboard from "./components/DoctorDashboard";
+import BookingForm from './components/BookingForm';
 import { AuthProvider } from "./context/AuthContext";
 
 // Define type for ProtectedRoute props
@@ -100,6 +101,15 @@ function App() {
               element={
                 <ProtectedRoute requiredUserType="doctor">
                   <DoctorDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/booking"
+              element={
+                <ProtectedRoute requiredUserType="user">
+                  <BookingForm />
                 </ProtectedRoute>
               }
             />
