@@ -1,50 +1,51 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {
+  const { isAuthenticated, userType, logout } = useAuth();
+  const navigate = useNavigate();
+  
+  // const handleLogout = () => {
+  //   logout();
+  //   navigate("/login");
+  // };
+  
   return (
-    <nav className="bg-white shadow-lg">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-        <Link to="/home" className="text-2xl font-bold text-black-600 hover:text-cyan-800 transition-colors">
-          Telehealth Companion
-        </Link>
-          <div className="flex space-x-7">
-            <div className="flex space-x-4">
-              
-              <Link
-                to="/home"
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+    <nav className="bg-blue-600 p-4 text-white">
+      <div className="container mx-auto flex justify-between items-center">
+        <Link to="/" className="text-xl font-bold">Telehealth Companion</Link>
+        
+        <div className="flex items-center space-x-4">
+          <Link to="/home" className="hover:text-blue-200">Home</Link>
+          <Link to="/about" className="hover:text-blue-200">About</Link>
+          <Link to="/pricing" className="hover:text-blue-200">Pricing</Link>
+          
+          {isAuthenticated ? (
+            <>
+              <Link 
+                to={userType === "user" ? "/patient-dashboard" : "/doctor-dashboard"} 
+                className="hover:text-blue-200"
               >
-                Home
+                Dashboard
               </Link>
-              <Link
-                to="/about"
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              {/* <button 
+                onClick={handleLogout}
+                className="bg-white text-blue-600 px-4 py-2 rounded hover:bg-blue-100"
               >
-                About us
-              </Link>
-              <Link
-                to="/pricing"
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                Logout
+              </button> */}
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="hover:text-blue-200">Login</Link>
+              <Link 
+                to="/signup" 
+                className="bg-white text-blue-600 px-4 py-2 rounded hover:bg-blue-100"
               >
-                Pricing
+                Sign Up
               </Link>
-            </div>
-          </div>
-          <div className="flex space-x-3">
-            <Link
-              to="/login"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300"
-            >
-              Log In
-            </Link>
-            <Link
-              to="/signup"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300"
-            >
-              Sign Up
-            </Link>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </nav>

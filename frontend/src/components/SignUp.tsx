@@ -1,10 +1,45 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import API_URL from "../services/api"; // Keep using API_URL from your service
 
 type UserType = "user" | "doctor";
 
-// Doctor signup function
+// Enhanced email check debugging
+const checkEmailExists = async (email: string): Promise<{ exists: boolean; type?: string }> => {
+  try {
+    console.log("Checking if email exists:", email);
+    
+    const response = await fetch(`${API_URL}/check-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    });
+    
+    console.log("Email check response status:", response.status);
+    
+    const text = await response.text();
+    console.log("Email check raw response:", text);
+    
+    let data;
+    try {
+      data = JSON.parse(text);
+      console.log("Email check result:", data);
+    } catch (e) {
+      console.error("Failed to parse email check response:", e);
+      return { exists: false };
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Error checking email:", error);
+    return { exists: false };
+  }
+};
+
+// Doctor signup function (keep as is)
 const doctorSignUp = async (
   name: string,
   email: string,
@@ -13,7 +48,7 @@ const doctorSignUp = async (
   password: string
 ) => {
   try {
-    const response = await fetch("http://localhost:5000/api/doctors/signup", {
+    const response = await fetch(`${API_URL}/doctors/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -31,7 +66,7 @@ const doctorSignUp = async (
   }
 };
 
-// User/Patient signup function
+// User/Patient signup function (keep as is)
 const userSignUp = async (
   name: string,
   email: string,
@@ -39,7 +74,7 @@ const userSignUp = async (
   password: string
 ) => {
   try {
-    const response = await fetch("http://localhost:5000/api/users/signup", {
+    const response = await fetch(`${API_URL}/users/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -58,6 +93,7 @@ const userSignUp = async (
 };
 
 const SignUp = () => {
+  // Your existing state variables
   const [userType, setUserType] = useState<UserType>("user");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -75,7 +111,15 @@ const SignUp = () => {
     setError(null);
 
     try {
-      // Insert new user data through backend API
+      // First, check if this email already exists
+      const emailCheck = await checkEmailExists(email);
+      
+      if (emailCheck.exists) {
+        setError(`This email is already registered as a ${emailCheck.type}. Please use a different email or login.`);
+        return;
+      }
+
+      // Proceed with signup if email is unique (keep existing code)
       if (userType === "user") {
         const newUser = await userSignUp(name, email, phone, password);
 
@@ -84,6 +128,7 @@ const SignUp = () => {
         localStorage.setItem("userId", String(newUser.id)); // Ensure id is a string
         localStorage.setItem("userEmail", newUser.email);
         localStorage.setItem("userName", newUser.name);
+        localStorage.setItem("userType", "user"); // Add this for better session tracking
       } else {
         const newDoctor = await doctorSignUp(
           name,
@@ -98,6 +143,7 @@ const SignUp = () => {
         localStorage.setItem("userId", String(newDoctor.id)); // Ensure id is a string
         localStorage.setItem("userEmail", newDoctor.email);
         localStorage.setItem("userName", newDoctor.name);
+        localStorage.setItem("userType", "doctor"); // Add this for better session tracking
       }
 
       // Redirect to appropriate dashboard
@@ -116,6 +162,7 @@ const SignUp = () => {
     }
   };
 
+  // Rest of the component remains unchanged
   return (
     <div className="min-h-screen bg-gray-100 p-8 flex flex-col items-center justify-center">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
@@ -158,6 +205,7 @@ const SignUp = () => {
         )}
 
         <form onSubmit={handleSignUp} className="space-y-4">
+          {/* Name field - was missing */}
           <div>
             <label
               htmlFor="name"
@@ -175,6 +223,7 @@ const SignUp = () => {
             />
           </div>
 
+          {/* Email field */}
           <div>
             <label
               htmlFor="email"
@@ -192,6 +241,7 @@ const SignUp = () => {
             />
           </div>
 
+          {/* Phone number field - fixed label */}
           <div>
             <label
               htmlFor="phone"

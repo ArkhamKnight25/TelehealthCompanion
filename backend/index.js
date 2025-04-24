@@ -64,21 +64,33 @@ try {
   app.post("/api/doctors/login", async (req, res) => {
     try {
       const { email, password } = req.body;
-
-      // Query the Doctors table for matching credentials
-      const { data, error } = await supabase
+      
+      // Find doctor by email in Doctors table (note capital D)
+      const { data: doctor, error } = await supabase
         .from("Doctors")
         .select("*")
         .eq("email", email)
-        .eq("password", password)
-        .single();
-
-      if (error) return res.status(400).json({ error: error.message });
-      if (!data) return res.status(401).json({ error: "Invalid credentials" });
-
-      return res.status(200).json(data);
-    } catch (err) {
-      return res.status(500).json({ error: err.message });
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (!doctor) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // In a real app, you'd verify the password hash here
+      // For this example, assuming direct comparison (not secure!)
+      if (doctor.password !== password) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // Remove password from response
+      delete doctor.password;
+      
+      return res.status(200).json(doctor);
+    } catch (error) {
+      console.error("Doctor login error:", error);
+      return res.status(500).json({ error: "Server error" });
     }
   });
 
@@ -103,21 +115,33 @@ try {
   app.post("/api/users/login", async (req, res) => {
     try {
       const { email, password } = req.body;
-
-      // Query the Users table for matching credentials
-      const { data, error } = await supabase
+      
+      // Find user by email in Users table (note capital U)
+      const { data: user, error } = await supabase
         .from("Users")
         .select("*")
         .eq("email", email)
-        .eq("password", password)
-        .single();
-
-      if (error) return res.status(400).json({ error: error.message });
-      if (!data) return res.status(401).json({ error: "Invalid credentials" });
-
-      return res.status(200).json(data);
-    } catch (err) {
-      return res.status(500).json({ error: err.message });
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // In a real app, you'd verify the password hash here
+      // For this example, assuming direct comparison (not secure!)
+      if (user.password !== password) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // Remove password from response
+      delete user.password;
+      
+      return res.status(200).json(user);
+    } catch (error) {
+      console.error("User login error:", error);
+      return res.status(500).json({ error: "Server error" });
     }
   });
 
@@ -164,6 +188,56 @@ try {
       return res.status(200).json(data);
     } catch (err) {
       return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Add this to your Express backend
+  app.post('/api/check-email', async (req, res) => {
+    try {
+      const { email } = req.body;
+      console.log("Checking email:", email); // Debug log
+      
+      // Check in Users table - note the capital U
+      const { data: users, error: userError } = await supabase
+        .from('Users') // Changed from 'users' to 'Users'
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+      
+      if (userError) {
+        console.error("User check error:", userError);
+        throw userError;
+      }
+      
+      console.log("Users check result:", users); // Debug log
+      
+      if (users) {
+        return res.json({ exists: true, type: "patient" });
+      }
+      
+      // Check in Doctors table - note the capital D
+      const { data: doctors, error: doctorError } = await supabase
+        .from('Doctors') // Changed from 'doctors' to 'Doctors'
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+      
+      if (doctorError) {
+        console.error("Doctor check error:", doctorError);
+        throw doctorError;
+      }
+      
+      console.log("Doctors check result:", doctors); // Debug log
+      
+      if (doctors) {
+        return res.json({ exists: true, type: "doctor" });
+      }
+      
+      // Email doesn't exist in either table
+      return res.json({ exists: false });
+    } catch (error) {
+      console.error("Error checking email:", error);
+      return res.status(500).json({ error: "Server error checking email" });
     }
   });
 

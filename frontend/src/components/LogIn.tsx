@@ -1,18 +1,93 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { userLogin, doctorLogin } from "../services/api";
+import API_URL from "../services/api";
 
 type UserType = "user" | "doctor";
 
+// Define types for response data
+type User = {
+  id: string | number;
+  name: string;
+  email: string;
+  phone: string;
+  created_at?: string;
+};
+
+type Doctor = {
+  id: string | number;
+  name: string;
+  email: string;
+  phone: string;
+  specialisation: string;
+  created_at?: string;
+};
+
 const LogIn = () => {
-  const [userType, setUserType] = useState<UserType>("user");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [userType, setUserType] = useState<UserType>("user");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { setUserType: setAuthUserType } = useAuth();
+  const { setUserType: setAuthUserType, setIsAuthenticated } = useAuth();
+
+  // User login function
+  const userLogin = async (email: string, password: string): Promise<User> => {
+    const response = await fetch(`${API_URL}/users/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error);
+
+    return data;
+  };
+
+  // Doctor login function with debugging
+  const doctorLogin = async (email: string, password: string): Promise<Doctor> => {
+    try {
+      console.log("Sending doctor login request for email:", email);
+      
+      const response = await fetch(`${API_URL}/doctors/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const text = await response.text();
+      console.log("Raw doctor login response:", text);
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error("Failed to parse response as JSON:", text);
+        throw new Error("Server returned invalid JSON. Please contact support.");
+      }
+
+      if (!response.ok) {
+        console.error("Doctor login error response:", data);
+        throw new Error(data.error || "Login failed. Please try again.");
+      }
+      
+      if (!data.id || !data.email) {
+        console.error("Doctor login response missing required fields:", data);
+        throw new Error("Invalid response from server. Please contact support.");
+      }
+      
+      return data;
+    } catch (error) {
+      console.error("Doctor login error:", error);
+      throw error;
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,24 +96,38 @@ const LogIn = () => {
 
     try {
       if (userType === "user") {
+        console.log("Attempting user login...");
         const user = await userLogin(email, password);
 
-        // Set user context data
+        // Set auth context and localStorage
         setAuthUserType("user");
-        localStorage.setItem("userId", String(user.id)); // Convert to string in case id is a number
+        setIsAuthenticated(true);
+        localStorage.setItem("userId", String(user.id));
         localStorage.setItem("userEmail", user.email);
         localStorage.setItem("userName", user.name);
+        localStorage.setItem("userType", "user"); // Important - must match exactly!
 
+        // Important: log what we're storing
+        console.log("Logged in as user:", user.name, "with type:", "user");
+        
+        // Navigate to the patient dashboard
         navigate("/patient-dashboard");
       } else {
+        console.log("Attempting doctor login...");
         const doctor = await doctorLogin(email, password);
 
-        // Set user context data
+        // Set auth context and localStorage
         setAuthUserType("doctor");
-        localStorage.setItem("userId", String(doctor.id)); // Convert to string in case id is a number
+        setIsAuthenticated(true);
+        localStorage.setItem("userId", String(doctor.id));
         localStorage.setItem("userEmail", doctor.email);
         localStorage.setItem("userName", doctor.name);
+        localStorage.setItem("userType", "doctor"); // Important - must match exactly!
 
+        // Important: log what we're storing
+        console.log("Logged in as doctor:", doctor.name, "with type:", "doctor");
+        
+        // Navigate to the doctor dashboard
         navigate("/doctor-dashboard");
       }
     } catch (error) {
@@ -60,7 +149,6 @@ const LogIn = () => {
           Log In
         </h1>
 
-        {/* User Type Toggle */}
         <div className="flex justify-center mb-6">
           <div className="bg-gray-200 rounded-full p-1 inline-flex">
             <button
@@ -140,9 +228,9 @@ const LogIn = () => {
 
         <p className="mt-4 text-center text-gray-600">
           Don't have an account?{" "}
-          <a href="/signup" className="text-blue-600 hover:underline">
+          <Link to="/signup" className="text-blue-600 hover:underline">
             Sign up
-          </a>
+          </Link>
         </p>
       </div>
     </div>
