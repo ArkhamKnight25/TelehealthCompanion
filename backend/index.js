@@ -342,6 +342,60 @@ try {
     }
   });
 
+  // Get bookings for a doctor (with patient details)
+  app.get("/api/bookings/doctor/:doctorId", async (req, res) => {
+    try {
+      const { doctorId } = req.params;
+      console.log(`Fetching bookings for doctor ID: ${doctorId}`);
+      
+      const { data, error } = await supabase
+        .from("Bookings")
+        .select(`
+          *,
+          Users:user_id (id, name, email, phone)
+        `)
+        .eq("doctor_id", doctorId)
+        .order("appointment_time", { ascending: true });
+        
+      if (error) {
+        console.error("Error fetching doctor bookings:", error);
+        return res.status(400).json({ error: error.message });
+      }
+      
+      console.log(`Found ${data.length} bookings for doctor ${doctorId}`);
+      return res.status(200).json(data || []);
+    } catch (err) {
+      console.error("Error in /api/bookings/doctor/:doctorId endpoint:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Non-prefixed version for consistency (choose one approach)
+  app.get("/bookings/doctor/:doctorId", async (req, res) => {
+    try {
+      const { doctorId } = req.params;
+      
+      const { data, error } = await supabase
+        .from("Bookings")
+        .select(`
+          *,
+          Users:user_id (id, name, email, phone)
+        `)
+        .eq("doctor_id", doctorId)
+        .order("appointment_time", { ascending: true });
+        
+      if (error) {
+        console.error("Error fetching doctor bookings:", error);
+        return res.status(400).json({ error: error.message });
+      }
+      
+      return res.status(200).json(data || []);
+    } catch (err) {
+      console.error("Error in /bookings/doctor/:doctorId endpoint:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   // For doctors
   app.get("/doctors", async (req, res) => {
     try {
@@ -456,3 +510,4 @@ try {
 } catch (error) {
   console.error("Error initializing Supabase client:", error);
 }
+
